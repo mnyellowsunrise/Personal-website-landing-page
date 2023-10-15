@@ -1,5 +1,8 @@
 import * as THREE from 'three';
-
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { GlitchPass } from 'three/addons/postprocessing/GlitchPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 // Create a scene
 const scene = new THREE.Scene();
@@ -7,8 +10,6 @@ const scene = new THREE.Scene();
 // Create a camera
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 camera.position.z = 5.8;
-
-
 
 // Create a container div for the list
 const infoContainer = document.createElement('div');
@@ -31,15 +32,42 @@ listItems.forEach((itemText) => {
   infoContainer.appendChild(listItem);
 });
 
-//const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-//directionalLight.position.set(1, 1, 1);
-//scene.add(directionalLight);
-
-
 // Create a renderer
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
+
+const composer = new EffectComposer( renderer );
+
+const renderPass = new RenderPass( scene, camera );
+
+
+const glitchPass = new GlitchPass();
+
+
+const outputPass = new OutputPass();
+
+
+let isGlitchEnabled = true; // Flag to control glitch effect
+
+// Function to enable or disable the glitch effect
+function toggleGlitch() {
+  if (isGlitchEnabled) {
+    composer.removePass(glitchPass); // Disable the glitch effect
+  } else {
+  	composer.addPass( renderPass );
+    composer.addPass(glitchPass);
+    composer.addPass( outputPass );// Enable the glitch effect
+  }
+  isGlitchEnabled = !isGlitchEnabled; // Toggle the flag
+
+  // Set the next interval for toggling the glitch effect (e.g., 60 seconds)
+  const interval = 18000; // 60 seconds in milliseconds
+  setTimeout(toggleGlitch, interval);
+}
+
+// Initial trigger for enabling the glitch effect
+toggleGlitch();
 
 const octahedronGeometry = new THREE.OctahedronGeometry(1);
 const octahedronMaterial = new THREE.MeshStandardMaterial({ color: 0xFFFF00, transparent: true, opacity: 0.8 });
@@ -53,13 +81,7 @@ ringMaterial.blending = THREE.NormalBlending;
 const ring = new THREE.Mesh(ringGeometry, ringMaterial);
 scene.add(ring);
 
-
-
-
-
 const textureLoader = new THREE.TextureLoader();
-
-
 
 // Create a particle system
 const particleGeometry = new THREE.BufferGeometry();
@@ -127,9 +149,12 @@ document.addEventListener('mousemove', (event) => {
 const hemisphereLight = new THREE.HemisphereLight(0x87CEEB, 0x8B4513, 1.5); // Sky color, Ground color, Intensity
 scene.add(hemisphereLight);
 
-
 const animate = () => {
   requestAnimationFrame(animate);
+  
+
+
+
 
   // Rotate the octahedron
   octahedron.rotation.x += 0.001;
@@ -161,9 +186,14 @@ const animate = () => {
     colors[i + 2] += (Math.random() - 0.5) * 0.01; // Randomly change the blue channel
   }
   particleGeometry.attributes.color.needsUpdate = true;
+  
+  
+  
 
   // Render the scene
   renderer.render(scene, camera);
+  composer.render();
+
 };
 
 
